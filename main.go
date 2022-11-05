@@ -13,8 +13,8 @@ func main() {
 
 	cConfig := absence.NewFromPath(path)
 	client := absence.New(cConfig)
-	h, err := client.GetAllHolydays()
-	if err != nil {
+	h, hasToWork := client.HaveToWork()
+	if !hasToWork {
 		panic("jarl")
 	}
 	println(h)

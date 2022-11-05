@@ -20,6 +20,7 @@ type Client struct {
 	user       *User
 	company    *Company
 	logger     *log.Logger
+	hollydays  []HolidayDetail
 }
 
 func New(c *Config) *Client {
@@ -55,6 +56,12 @@ func New(c *Config) *Client {
 		return nil
 	}
 	client.company = comp
+
+	hDays, err := client.getMyHolydays()
+	if err != nil {
+		return nil
+	}
+	client.hollydays = hDays
 
 	logger.Infof("connected as %s %s on company %s", me.FirstName, me.LastName, comp.Name)
 
@@ -123,7 +130,7 @@ func (c *Client) myCompany() (*Company, error) {
 
 }
 
-func (c *Client) getHolydays(filter string) []byte {
+func (c *Client) getHolydaysRequest(filter string) []byte {
 	url := fmt.Sprintf("%s/holidays", baseURL)
 	method := "POST"
 	payload := strings.NewReader(`{
@@ -139,56 +146,54 @@ func (c *Client) getHolydays(filter string) []byte {
 	return respBytes
 }
 
-func (c *Client) getHolidaysRegion() []byte {
-	url := fmt.Sprintf("%s/holidayregions", baseURL)
-	method := "POST"
-	payload := strings.NewReader(`{
-		"skip":0,
-		"limit":5000,
-		"filter": {},
-		"sortBy":{
-			"date":1
-		}
-	}`)
+func (c *Client) getMyHolydays() ([]HolidayDetail, error) {
+	dateStart := fmt.Sprintf("%d-01-01T00:00:00.000Z", c.company.CurrentCompanyYear)
+	dateEnd := fmt.Sprintf("%d-12-31T23:59:59.999Z", c.company.CurrentCompanyYear)
+	ids := fmt.Sprintf(`"%s"`, strings.Join(c.user.HolidayIds, `","`))
 
-	respBytes := c.doRequest(url, method, payload)
-	return respBytes
-}
-
-func (c *Client) GetAllHolydays() ([]HolidayDetail, error) {
-	// Get Holydays based on Company
-	filter := `"$and":[{"company":"` + c.user.Company + `"}]`
-	respBytes := c.getHolydays(filter)
+	filter := fmt.Sprintf(`"_id":{"$in":[%s]},"dates":{"$gte":"%s","$lte":"%s"}`, ids, dateStart, dateEnd)
+	respBytes := c.getHolydaysRequest(filter)
 	holidays := Holidays{}
 	if err := json.Unmarshal(respBytes, &holidays); err != nil {
 		return nil, err
 	}
 
-	// Get Holydays based on
-	respBytes = c.getHolidaysRegion()
-	regionHolidays := HolidayRegion{}
+	return holidays.Data, nil
+}
 
-	if err := json.Unmarshal(respBytes, &regionHolidays); err != nil {
-		return nil, err
-	}
-	var hrd HolidayRegionDetail
-	for _, value := range regionHolidays.Data {
-		if value.Name == c.company.Country {
-			hrd = value
-			break
+func (c *Client) HaveToWork() (*HolidayDetail, bool) {
+	hasToWork := false
+	today := time.Now().Weekday()
+	for _, workDay := range c.config.WorkingDays {
+		if today == workDay {
+			hasToWork = true
 		}
 	}
-	dateStart := fmt.Sprintf("%d-01-01T00:00:00.000Z", c.company.CurrentCompanyYear)
-	dateEnd := fmt.Sprintf("%d-12-31T23:59:59.999Z", c.company.CurrentCompanyYear)
-	ids := fmt.Sprintf(`"%s"`, strings.Join(hrd.HolidayIds, `","`))
+	holiday, isHoliDay := c.todayIsHoliday()
+	return holiday, !isHoliDay && hasToWork
+}
 
-	filter = fmt.Sprintf(`"_id":{"$in":[%s]},"dates":{"$gte":"%s","$lte":"%s"}`, ids, dateStart, dateEnd)
-	respBytes = c.getHolydays(filter)
-	fmt.Println(string(respBytes))
-	holidaysRegional := Holidays{}
-	if err := json.Unmarshal(respBytes, &holidaysRegional); err != nil {
-		return nil, err
+func (c *Client) todayIsHoliday() (*HolidayDetail, bool) {
+	for _, holiday := range c.hollydays {
+		if len(holiday.Dates) == 1 {
+			if isToday(holiday.Dates[0]) {
+				return &holiday, true
+			}
+		} else {
+			for _, date := range holiday.Dates {
+				if date.Year() != c.company.CurrentCompanyYear {
+					continue
+				}
+				if isToday(date) {
+					return &holiday, true
+				}
+			}
+		}
 	}
+	return nil, false
+}
 
-	return append(holidays.Data, holidaysRegional.Data...), nil
+func isToday(date time.Time) bool {
+	now := time.Now()
+	return now.Day() == date.Day() && now.Month() == date.Month()
 }

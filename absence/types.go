@@ -3,11 +3,18 @@ package absence
 import "time"
 
 type User struct {
-	ID        string `json:"_id"`
-	Company   string `json:"company"`
-	Email     string `json:"email"`
-	FirstName string `json:"firstName"`
-	LastName  string `json:"lastName"`
+	ID                     string    `json:"_id"`
+	Company                string    `json:"company"`
+	Email                  string    `json:"email"`
+	FirstName              string    `json:"firstName"`
+	LastName               string    `json:"lastName"`
+	EmploymentStartDate    time.Time `json:"employmentStartDate"`
+	HolidayCountryLanguage string    `json:"holidayCountryLanguage"`
+	OauthGoogleImageurl    string    `json:"oauthGoogleImageurl"`
+	TeamIds                []string  `json:"teamIds"`
+	DepartmentId           string    `json:"departmentId"`
+	LocationId             string    `json:"locationId"`
+	HolidayIds             []string  `json:"holidayIds"`
 }
 
 type Company struct {
@@ -48,19 +55,4 @@ type HolidayDetail struct {
 	Repeating        bool        `json:"repeating"`
 	Date             time.Time   `json:"date"`
 	LocationIds      []string    `json:"locationIds"`
-}
-
-type HolidayRegion struct {
-	Skip       int                   `json:"skip"`
-	Limit      int                   `json:"limit"`
-	Count      int                   `json:"count"`
-	TotalCount int                   `json:"totalCount"`
-	Data       []HolidayRegionDetail `json:"data"`
-}
-
-type HolidayRegionDetail struct {
-	Id         string   `json:"_id"`
-	Name       string   `json:"name"`
-	HolidayIds []string `json:"holidayIds"`
-	Src        string   `json:"src,omitempty"`
 }
