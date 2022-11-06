@@ -8,8 +8,9 @@ import (
 )
 
 type Config struct {
-	ID          string         `yaml:"absence_id"`
-	Key         string         `yaml:"absence_key"`
+	ID  string `yaml:"absence_id"`
+	Key string `yaml:"absence_key"`
+
 	TypeOfWork  string         `yaml:"type_of_work"`
 	StartHour   string         `yaml:"start_hour"`
 	EndHour     string         `yaml:"end_hour"`
