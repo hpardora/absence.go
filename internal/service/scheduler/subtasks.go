@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"github.com/hpardora/absence.go/pkg/telegram"
 	"sort"
 	"time"
 )
@@ -90,4 +91,14 @@ func (s *Scheduler) clearHolidays() []*Holiday {
 		return dates[i].Date.Before(dates[j].Date)
 	})
 	return dates
+}
+
+func (s *Scheduler) notifyToTelegram(msg string) bool {
+	t := telegram.New(s.conf.TelegramApiToken, s.conf.TelegramChannelID, s.conf.TelegramChannelName)
+
+	ok, err := t.SendMessage(msg)
+	if err != nil {
+		s.logger.WithError(err).Errorf("unable to send msg to telegram")
+	}
+	return ok
 }

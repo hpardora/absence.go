@@ -30,6 +30,7 @@ func (s *Scheduler) Calculate() {
 	}
 
 	// TODO Add timers to start and stop
+	s.notifyToTelegram("Sorry but Today you must work!!")
 
 }
 

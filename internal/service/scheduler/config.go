@@ -13,6 +13,10 @@ type Config struct {
 	StartHour         string         `yaml:"start_hour"`
 	EndHour           string         `yaml:"end_hour"`
 	WorkingDays       []time.Weekday `yaml:"working_days"`
+
+	TelegramApiToken    string `yaml:"telegram_api_token"`
+	TelegramChannelID   string `yaml:"telegram_channel_id"`
+	TelegramChannelName string `yaml:"telegram_channel_name"`
 }
 
 func NewFromPath(path string) *Config {
