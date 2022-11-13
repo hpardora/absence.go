@@ -1,19 +1,19 @@
 package client
 
 import (
-	"github.com/hpardora/absence.go/internal/service/printer"
+	"github.com/hpardora/absence.go/internal/service/scheduler"
 	"github.com/hpardora/absence.go/pkg/absence"
 	"github.com/hpardora/absence.go/pkg/logger"
 	"github.com/spf13/cobra"
 	"os"
 )
 
-func NewCmdPrinter() *cobra.Command {
+func NewCmdScheduler() *cobra.Command {
 	log := logger.GetLogger()
-	log.Infof("starting printer")
+	log.Infof("starting scheduling")
 	cmd := &cobra.Command{
-		Use:   "print",
-		Short: "retrieve my Absence data",
+		Use:   "scheduler",
+		Short: "auto Absence-Me!",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := os.Getenv("ABSENCE_PATH")
 			if len(path) == 0 {
@@ -23,11 +23,11 @@ func NewCmdPrinter() *cobra.Command {
 			cConfig := absence.NewFromPath(path)
 			client := absence.New(cConfig, log)
 
-			printerSvc := printer.New(client, log)
-			printerSvc.Process()
+			config := scheduler.NewFromPath(path)
+			schedulerSvc := scheduler.New(config, client, log)
+			schedulerSvc.Process()
 			return nil
 		},
 	}
-
 	return cmd
 }

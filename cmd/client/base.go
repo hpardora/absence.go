@@ -9,5 +9,6 @@ func NewCMDCli() *cobra.Command {
 	}
 
 	cmd.AddCommand(NewCmdPrinter())
+	cmd.AddCommand(NewCmdScheduler())
 	return cmd
 }
