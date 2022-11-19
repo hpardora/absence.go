@@ -18,6 +18,8 @@ const (
 	EndpointReasons  string = "/reasons"
 	EndpointHolidays string = "/holidays"
 	EndpointAbsences string = "/absences"
+	EndpointClockIn  string = "https://app.absence.io/api/timetracking/clockin"
+	EndpointClockOut string = "https://app.absence.io/api/timetracking/clockout"
 )
 
 type Client struct {
@@ -164,4 +166,34 @@ func (c *Client) GetMyAbsences(userID string, companyCurrentYear int) ([]Absence
 	}
 
 	return absences.Data, nil
+}
+
+func (c *Client) ClockIn(userID string, now time.Time) {
+
+	method := "POST"
+	payload := strings.NewReader(`{
+		"userId":"` + userID + `",
+		"type": "work",
+		"source": {
+			"sourceType":"browser",
+			"sourceId": "stopwatch"
+		},
+		"timezone": "+0100",
+		"timezoneName": "Central European Standard Time",
+		"start":"` + now.Format("2006-01-02T15:04:05") + `.123Z"
+	}`)
+	c.doRequest(EndpointClockIn, method, payload)
+
+}
+
+func (c *Client) ClockOut(userID string) {
+	method := "POST"
+	payload := strings.NewReader(`{
+		"userId": "` + userID + `",
+		"source": {
+			"sourceType": "browser",
+			"sourceId": "stopwatch"
+		}
+	}`)
+	c.doRequest(EndpointClockOut, method, payload)
 }

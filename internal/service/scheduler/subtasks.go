@@ -102,3 +102,22 @@ func (s *Scheduler) notifyToTelegram(msg string) bool {
 	}
 	return ok
 }
+
+func (s *Scheduler) manageClockIn(startDuration time.Duration) {
+	timerStart := time.NewTimer(startDuration)
+	go func() {
+		<-timerStart.C
+		nowIn := time.Now().UTC()
+		s.client.ClockIn(s.user.ID, nowIn)
+		s.notifyToTelegram("starting Absence work!")
+	}()
+}
+
+func (s *Scheduler) manageClockOut(startDuration time.Duration) {
+	timerStart := time.NewTimer(startDuration)
+	go func() {
+		<-timerStart.C
+		s.client.ClockOut(s.user.ID)
+		s.notifyToTelegram("finished Absence work!")
+	}()
+}

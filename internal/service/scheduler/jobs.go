@@ -2,18 +2,15 @@ package scheduler
 
 import (
 	"github.com/hpardora/absence.go/pkg/absence"
+	"math/rand"
+	"strconv"
+	"strings"
 	"time"
 )
 
 func (s *Scheduler) Calculate() {
 	// Once by week, reload all base data
-	now := time.Now()
-	if now.Weekday() == 1 {
-		s.populateUser()
-		s.populateCompany()
-		s.populateHolidays()
-		s.populateReasons()
-	}
+	now := time.Now().UTC()
 
 	// Check if today is a week working day
 	if !s.isWorkingWeekDay(now) {
@@ -28,10 +25,18 @@ func (s *Scheduler) Calculate() {
 		s.logger.Infof("today is holiday!!!")
 		return
 	}
-
-	// TODO Add timers to start and stop
 	s.notifyToTelegram("Sorry but Today you must work!!")
 
+	startDuration, err := calculateDurationFromString(s.conf.StartHour, now)
+	if err != nil {
+		return
+	}
+	endDuration, err := calculateDurationFromString(s.conf.EndHour, now)
+	if err != nil {
+		return
+	}
+	s.manageClockIn(startDuration)
+	s.manageClockOut(endDuration)
 }
 
 func (s *Scheduler) isWorkingWeekDay(now time.Time) bool {
@@ -75,4 +80,31 @@ func (s *Scheduler) todayIsHoliday(now time.Time) bool {
 		}
 	}
 	return false
+}
+
+func calculateDurationFromString(baseDuration string, now time.Time) (time.Duration, error) {
+	adding := time.Now()
+
+	splited := strings.Split(baseDuration, ":")
+	hours, err := strconv.Atoi(splited[0])
+	if err != nil {
+		return 0, err
+	}
+
+	mins, err := strconv.Atoi(splited[1])
+	if err != nil {
+		return 0, err
+	}
+
+	toAddHours := hours - adding.Hour()
+	adding.Add(time.Duration(toAddHours) * time.Hour)
+
+	toAddMins := mins - adding.Minute()
+	randStartMin := rand.Intn(10 - 1)
+	toAddMins *= randStartMin
+
+	adding.Add(time.Duration(toAddMins) * time.Minute)
+
+	resultTime := adding.Sub(now)
+	return resultTime, nil
 }
