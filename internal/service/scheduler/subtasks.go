@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"fmt"
 	"github.com/hpardora/absence.go/pkg/telegram"
 	"sort"
 	"time"
@@ -94,6 +95,10 @@ func (s *Scheduler) clearHolidays() []*Holiday {
 }
 
 func (s *Scheduler) notifyToTelegram(msg string) bool {
+	if !s.conf.TelegramEnabled {
+		return true
+	}
+
 	t := telegram.New(s.conf.TelegramApiToken, s.conf.TelegramChannelID, s.conf.TelegramChannelName)
 
 	ok, err := t.SendMessage(msg)
@@ -107,17 +112,20 @@ func (s *Scheduler) manageClockIn(startDuration time.Duration) {
 	timerStart := time.NewTimer(startDuration)
 	go func() {
 		<-timerStart.C
-		nowIn := time.Now().UTC()
-		s.client.ClockIn(s.user.ID, nowIn)
+		defer wg.Done()
+		s.timeSpan, _ = s.client.ClockInApi(s.user.ID)
 		s.notifyToTelegram("starting Absence work!")
+		time.Sleep(5 * time.Second)
 	}()
 }
 
-func (s *Scheduler) manageClockOut(startDuration time.Duration) {
-	timerStart := time.NewTimer(startDuration)
+func (s *Scheduler) manageClockOut(endDuration time.Duration) {
+	timerStart := time.NewTimer(endDuration)
 	go func() {
 		<-timerStart.C
-		s.client.ClockOut(s.user.ID)
-		s.notifyToTelegram("finished Absence work!")
+		defer wg.Done()
+		result := s.client.ClockOutApi(s.timeSpan)
+		s.notifyToTelegram(fmt.Sprintf("finished Absence work! with result: %s", result))
+		time.Sleep(5 * time.Second)
 	}()
 }

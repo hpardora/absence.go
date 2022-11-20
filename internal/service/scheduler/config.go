@@ -9,11 +9,12 @@ import (
 
 type Config struct {
 	CronExecutionTime string         `yaml:"cron_execution_time"`
-	TypeOfWork        string         `yaml:"type_of_work"`
 	StartHour         string         `yaml:"start_hour"`
 	EndHour           string         `yaml:"end_hour"`
 	WorkingDays       []time.Weekday `yaml:"working_days"`
+	RandomMinutes     int            `yaml:"random_minutes"`
 
+	TelegramEnabled     bool   `yaml:"telegram_enabled"`
 	TelegramApiToken    string `yaml:"telegram_api_token"`
 	TelegramChannelID   string `yaml:"telegram_channel_id"`
 	TelegramChannelName string `yaml:"telegram_channel_name"`

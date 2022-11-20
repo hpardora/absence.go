@@ -15,25 +15,32 @@ import (
 const baseURL string = "https://app.absence.io/api/v2"
 
 const (
-	EndpointReasons  string = "/reasons"
-	EndpointHolidays string = "/holidays"
-	EndpointAbsences string = "/absences"
-	EndpointClockIn  string = "https://app.absence.io/api/timetracking/clockin"
-	EndpointClockOut string = "https://app.absence.io/api/timetracking/clockout"
+	EndpointReasons        string = "/reasons"
+	EndpointHolidays       string = "/holidays"
+	EndpointAbsences       string = "/absences"
+	EndpointTimeSpan       string = "/timespans"
+	EndpointTimeSpanCreate string = "/timespans/create"
 )
 
 type Client struct {
-	hawkClient *hawk.Client
-	config     *Config
-	logger     *logrus.Logger
+	config *Config
+	logger *logrus.Logger
 }
 
 func New(c *Config, logger *logrus.Logger) *Client {
+	client := &Client{
+		config: c,
+		logger: logger,
+	}
+	return client
+}
+
+func (c *Client) GetHawkClient() *hawk.Client {
 	nonce := randStrings.RandStringRunes(6)
 	hawkClient := hawk.NewClient(
 		&hawk.Credential{
-			ID:  c.ID,
-			Key: c.Key,
+			ID:  c.config.ID,
+			Key: c.config.Key,
 			Alg: hawk.SHA256,
 		},
 		&hawk.Option{
@@ -42,17 +49,13 @@ func New(c *Config, logger *logrus.Logger) *Client {
 			Ext:       "some-app-data",
 		},
 	)
-	client := &Client{
-		hawkClient: hawkClient,
-		config:     c,
-		logger:     logger,
-	}
-	return client
+	return hawkClient
 }
 
 func (c *Client) buildHeader(method string, path string) string {
 	// build request header
-	header, _ := c.hawkClient.Header(method, path)
+	hawkClient := c.GetHawkClient()
+	header, _ := hawkClient.Header(method, path)
 	return header
 }
 
@@ -66,7 +69,7 @@ func (c *Client) doRequest(url string, method string, payload *strings.Reader) [
 		return nil
 	}
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("X-Requested-With", "XMLHttpRequest")
+	//req.Header.Add("X-Requested-With", "XMLHttpRequest")
 	req.Header.Add("Authorization", header)
 	res, err := client.Do(req)
 	if err != nil {
@@ -74,7 +77,7 @@ func (c *Client) doRequest(url string, method string, payload *strings.Reader) [
 		return nil
 	}
 	defer res.Body.Close()
-	c.logger.Debugf("method: %s\tresult_code: %d\t url: %s", method, res.StatusCode, url)
+	c.logger.Infof("method: %s\tresult_code: %d\turl: %s", method, res.StatusCode, url)
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -84,7 +87,21 @@ func (c *Client) doRequest(url string, method string, payload *strings.Reader) [
 	return body
 }
 
-func (c *Client) doPostRequest(endpoint string, filter string, sortBy string) []byte {
+func (c *Client) doPostRequest(endpoint string, payload *strings.Reader) []byte {
+	url := fmt.Sprintf("%s%s", baseURL, endpoint)
+	method := "POST"
+	respBytes := c.doRequest(url, method, payload)
+	return respBytes
+}
+
+func (c *Client) doPutRequest(endpoint string, payload *strings.Reader) []byte {
+	url := fmt.Sprintf("%s%s", baseURL, endpoint)
+	method := "PUT"
+	respBytes := c.doRequest(url, method, payload)
+	return respBytes
+}
+
+func (c *Client) doPostRequestCommon(endpoint string, filter string, sortBy string) []byte {
 	url := fmt.Sprintf("%s%s", baseURL, endpoint)
 	method := "POST"
 	payload := strings.NewReader(`{
@@ -128,7 +145,7 @@ func (c *Client) MyCompany(companyID string) (*Company, error) {
 func (c *Client) GetReasons() ([]Reason, error) {
 	filter := "{}"
 	sortBy := "{}"
-	respBytes := c.doPostRequest(EndpointReasons, filter, sortBy)
+	respBytes := c.doPostRequestCommon(EndpointReasons, filter, sortBy)
 	reasons := ReasonsResponse{}
 	if err := json.Unmarshal(respBytes, &reasons); err != nil {
 		return nil, err
@@ -145,7 +162,7 @@ func (c *Client) GetMyHolydays(companyCurrentYear int, userHolidayIds []string) 
 
 	filter := fmt.Sprintf(`{"_id":{"$in":[%s]},"dates":{"$gte":"%s","$lte":"%s"}}`, ids, dateStart, dateEnd)
 	sortBy := `{"date":1}`
-	respBytes := c.doPostRequest(EndpointHolidays, filter, sortBy)
+	respBytes := c.doPostRequestCommon(EndpointHolidays, filter, sortBy)
 	c.logger.Debug(string(respBytes))
 	holidays := HolidaysResponse{}
 	if err := json.Unmarshal(respBytes, &holidays); err != nil {
@@ -158,7 +175,7 @@ func (c *Client) GetMyHolydays(companyCurrentYear int, userHolidayIds []string) 
 func (c *Client) GetMyAbsences(userID string, companyCurrentYear int) ([]Absence, error) {
 	filter := fmt.Sprintf(`{"assignedToId":"%s","start":{"$gte":"%d-01-01"}}`, userID, companyCurrentYear-1)
 	sortBy := `{"start":-1}`
-	respBytes := c.doPostRequest(EndpointAbsences, filter, sortBy)
+	respBytes := c.doPostRequestCommon(EndpointAbsences, filter, sortBy)
 	c.logger.Debug(string(respBytes))
 	absences := AbsencesResponse{}
 	if err := json.Unmarshal(respBytes, &absences); err != nil {
@@ -168,32 +185,40 @@ func (c *Client) GetMyAbsences(userID string, companyCurrentYear int) ([]Absence
 	return absences.Data, nil
 }
 
-func (c *Client) ClockIn(userID string, now time.Time) {
-
-	method := "POST"
+func (c *Client) ClockInApi(userID string) (*TimeSpan, error) {
+	now := time.Now()
+	nowStr := now.Format("2006-01-02T15:04:05")
+	time.Sleep(1 * time.Second)
 	payload := strings.NewReader(`{
-		"userId":"` + userID + `",
-		"type": "work",
-		"source": {
-			"sourceType":"browser",
-			"sourceId": "stopwatch"
-		},
-		"timezone": "+0100",
-		"timezoneName": "Central European Standard Time",
-		"start":"` + now.Format("2006-01-02T15:04:05") + `.123Z"
+	  	"userId": "` + userID + `",
+		"start":"` + nowStr + `.001Z",
+	  	"end": null,
+	  	"timezoneName": "CEST",
+	  	"timezone": "+0100",
+	  	"type": "work"
 	}`)
-	c.doRequest(EndpointClockIn, method, payload)
+	respBytes := c.doPostRequest(EndpointTimeSpanCreate, payload)
+	tSpan := TimeSpan{}
+	if err := json.Unmarshal(respBytes, &tSpan); err != nil {
+		return nil, err
+	}
+
+	return &tSpan, nil
 
 }
 
-func (c *Client) ClockOut(userID string) {
-	method := "POST"
+func (c *Client) ClockOutApi(timeSpan *TimeSpan) string {
+	now := time.Now()
+	nowStr := now.Format("2006-01-02T15:04:05")
+	startStr := timeSpan.Start.Format("2006-01-02T15:04:05")
+	time.Sleep(1 * time.Second)
 	payload := strings.NewReader(`{
-		"userId": "` + userID + `",
-		"source": {
-			"sourceType": "browser",
-			"sourceId": "stopwatch"
-		}
+		"start":"` + startStr + `.001Z",
+		"end":"` + nowStr + `.001Z",
+	  	"timezoneName": "CEST",
+	  	"timezone": "+0100",
 	}`)
-	c.doRequest(EndpointClockOut, method, payload)
+	respBytes := c.doPutRequest(fmt.Sprintf("%s/%s", EndpointTimeSpan, timeSpan.Id), payload)
+	c.logger.Infof("%s", string(respBytes))
+	return string(respBytes)
 }

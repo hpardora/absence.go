@@ -7,7 +7,7 @@ import (
 
 func configure() {
 	cfg := getConfigFromEnv()
-	//timeStampFormat := defaultTimeStampFormat
+	timeStampFormat := defaultTimeStampFormat
 	level := log.DebugLevel
 
 	if cfg != nil {
@@ -15,14 +15,14 @@ func configure() {
 			level = *cfg.Level
 		}
 		if cfg.TimeStampFormat != "" {
-			//timeStampFormat = cfg.TimeStampFormat
+			timeStampFormat = cfg.TimeStampFormat
 		}
 	}
 
-	//formatter := log.JSONFormatter{
-	//	TimestampFormat: timeStampFormat,
-	//}
-	//log.SetFormatter(&formatter)
+	formatter := log.JSONFormatter{
+		TimestampFormat: timeStampFormat,
+	}
+	log.SetFormatter(&formatter)
 	log.SetLevel(level)
 	log.SetOutput(os.Stdout)
 }

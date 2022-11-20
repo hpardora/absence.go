@@ -113,3 +113,29 @@ type Reason struct {
 	UserNotificationIds    []interface{} `json:"userNotificationIds"`
 	SelectableByIds        []string      `json:"selectableByIds"`
 }
+
+type TimeSpan struct {
+	Compensations []interface{} `json:"compensations"`
+	Source        struct {
+		SourceType string `json:"sourceType"`
+		SourceId   string `json:"sourceId"`
+	} `json:"source"`
+	Id                 string        `json:"_id"`
+	Type               string        `json:"type"`
+	Start              time.Time     `json:"start"`
+	End                interface{}   `json:"end"`
+	Commentary         interface{}   `json:"commentary"`
+	Timezone           string        `json:"timezone"`
+	MillisecondOffset  int           `json:"millisecondOffset"`
+	TimezoneName       string        `json:"timezoneName"`
+	CreatedOn          time.Time     `json:"createdOn"`
+	ModifiedOn         time.Time     `json:"modifiedOn"`
+	UserId             string        `json:"userId"`
+	CompanyId          string        `json:"companyId"`
+	CreatedById        string        `json:"createdById"`
+	ModifiedById       string        `json:"modifiedById"`
+	LabelIds           []interface{} `json:"labelIds"`
+	EffectiveStart     time.Time     `json:"effectiveStart"`
+	StartInTimezone    time.Time     `json:"startInTimezone"`
+	GeneratedTimespans []interface{} `json:"generatedTimespans"`
+}

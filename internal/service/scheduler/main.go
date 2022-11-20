@@ -15,6 +15,7 @@ type Scheduler struct {
 	holidays []absence.Holiday
 	absences []absence.Absence
 	reasons  []absence.Reason
+	timeSpan *absence.TimeSpan
 }
 
 func New(cfg *Config, client *absence.Client, logger *logrus.Logger) *Scheduler {

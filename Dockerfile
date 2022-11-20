@@ -16,7 +16,7 @@ RUN update-ca-certificates
 
 RUN touch /var/log/cron.log
 
-RUN echo "0 7 * * * bash /bin/absencer scheduler" > /etc/cron.d/absencer
+RUN echo "0 7 * * * bash /bin/absencer scheduler > /dev/stdout" > /etc/cron.d/absencer
 RUN chmod 0644 /etc/cron.d/absencer
 
 COPY --from=build /app/absencer /bin/absencer
