@@ -115,27 +115,27 @@ type Reason struct {
 }
 
 type TimeSpan struct {
-	Compensations []interface{} `json:"compensations"`
-	Source        struct {
-		SourceType string `json:"sourceType"`
-		SourceId   string `json:"sourceId"`
-	} `json:"source"`
 	Id                 string        `json:"_id"`
-	Type               string        `json:"type"`
-	Start              time.Time     `json:"start"`
-	End                interface{}   `json:"end"`
 	Commentary         interface{}   `json:"commentary"`
-	Timezone           string        `json:"timezone"`
-	MillisecondOffset  int           `json:"millisecondOffset"`
-	TimezoneName       string        `json:"timezoneName"`
-	CreatedOn          time.Time     `json:"createdOn"`
-	ModifiedOn         time.Time     `json:"modifiedOn"`
-	UserId             string        `json:"userId"`
 	CompanyId          string        `json:"companyId"`
+	Compensations      []interface{} `json:"compensations"`
 	CreatedById        string        `json:"createdById"`
-	ModifiedById       string        `json:"modifiedById"`
-	LabelIds           []interface{} `json:"labelIds"`
+	CreatedOn          time.Time     `json:"createdOn"`
 	EffectiveStart     time.Time     `json:"effectiveStart"`
-	StartInTimezone    time.Time     `json:"startInTimezone"`
+	End                interface{}   `json:"end"`
 	GeneratedTimespans []interface{} `json:"generatedTimespans"`
+	LabelIds           []interface{} `json:"labelIds"`
+	MillisecondOffset  int           `json:"millisecondOffset"`
+	ModifiedById       string        `json:"modifiedById"`
+	ModifiedOn         time.Time     `json:"modifiedOn"`
+	Start              time.Time     `json:"start"`
+	StartInTimezone    time.Time     `json:"startInTimezone"`
+	Timezone           string        `json:"timezone"`
+	TimezoneName       string        `json:"timezoneName"`
+	Type               string        `json:"type"`
+	UserId             string        `json:"userId"`
+	Source             struct {
+		SourceId   string `json:"sourceId"`
+		SourceType string `json:"sourceType"`
+	} `json:"source"`
 }

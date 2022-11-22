@@ -12,14 +12,16 @@ import (
 	"time"
 )
 
-const baseURL string = "https://app.absence.io/api/v2"
+const baseURL string = "https://app.absence.io/api"
 
 const (
-	EndpointReasons        string = "/reasons"
-	EndpointHolidays       string = "/holidays"
-	EndpointAbsences       string = "/absences"
-	EndpointTimeSpan       string = "/timespans"
-	EndpointTimeSpanCreate string = "/timespans/create"
+	EndpointUsers    string = "/v2/users"
+	EndpointCompany  string = "/v2/companies"
+	EndpointReasons  string = "/v2/reasons"
+	EndpointHolidays string = "/v2/holidays"
+	EndpointAbsences string = "/v2/absences"
+	EndpointClockIn  string = "/timetracking/clockin"
+	EndpointClockOut string = "/timetracking/clockout"
 )
 
 type Client struct {
@@ -68,9 +70,15 @@ func (c *Client) doRequest(url string, method string, payload *strings.Reader) [
 		c.logger.WithError(err).Error("unable to create new request")
 		return nil
 	}
-	req.Header.Add("Content-Type", "application/json")
-	//req.Header.Add("X-Requested-With", "XMLHttpRequest")
+	req.Header.Add("Content-Type", "application/json;charset=utf-8")
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("X-Requested-With", "XMLHttpRequest")
 	req.Header.Add("Authorization", header)
+
+	if strings.Contains(url, "timetracking") {
+		req.Header.Add("Accept", "application/json, text/plain, */*")
+	}
+
 	res, err := client.Do(req)
 	if err != nil {
 		c.logger.WithError(err).Errorf("unable to do request %s", url)
@@ -116,7 +124,7 @@ func (c *Client) doPostRequestCommon(endpoint string, filter string, sortBy stri
 }
 
 func (c *Client) Me() (*User, error) {
-	url := fmt.Sprintf("%s/users/%s", baseURL, c.config.ID)
+	url := fmt.Sprintf("%s%s/%s", baseURL, EndpointUsers, c.config.ID)
 	method := "GET"
 	payload := strings.NewReader(``)
 	respBytes := c.doRequest(url, method, payload)
@@ -129,7 +137,7 @@ func (c *Client) Me() (*User, error) {
 }
 
 func (c *Client) MyCompany(companyID string) (*Company, error) {
-	url := fmt.Sprintf("%s/companies/%s", baseURL, companyID)
+	url := fmt.Sprintf("%s%s/%s", baseURL, EndpointCompany, companyID)
 	method := "GET"
 	payload := strings.NewReader(``)
 
@@ -190,14 +198,17 @@ func (c *Client) ClockInApi(userID string) (*TimeSpan, error) {
 	nowStr := now.Format("2006-01-02T15:04:05")
 	time.Sleep(1 * time.Second)
 	payload := strings.NewReader(`{
-	  	"userId": "` + userID + `",
+		"source": {
+			"sourceId": "stopwatch",
+			"sourceType": "android"
+		},
 		"start":"` + nowStr + `.001Z",
-	  	"end": null,
-	  	"timezoneName": "CEST",
-	  	"timezone": "+0100",
-	  	"type": "work"
+		"timezone": "+0100",
+		"timezoneName": "CET",
+		"type": "work",
+		"userId": "` + userID + `"
 	}`)
-	respBytes := c.doPostRequest(EndpointTimeSpanCreate, payload)
+	respBytes := c.doPostRequest(EndpointClockIn, payload)
 	tSpan := TimeSpan{}
 	if err := json.Unmarshal(respBytes, &tSpan); err != nil {
 		return nil, err
@@ -210,15 +221,21 @@ func (c *Client) ClockInApi(userID string) (*TimeSpan, error) {
 func (c *Client) ClockOutApi(timeSpan *TimeSpan) string {
 	now := time.Now()
 	nowStr := now.Format("2006-01-02T15:04:05")
-	startStr := timeSpan.Start.Format("2006-01-02T15:04:05")
 	time.Sleep(1 * time.Second)
+
 	payload := strings.NewReader(`{
-		"start":"` + startStr + `.001Z",
+		"_id": "` + timeSpan.Id + `",
 		"end":"` + nowStr + `.001Z",
-	  	"timezoneName": "CEST",
+		"source": {
+			"sourceId": "stopwatch",
+			"sourceType": "android"
+		},
 	  	"timezone": "+0100",
+	  	"timezoneName": "CET",
+	  	"type": "work",
+	  	"userId": "` + timeSpan.UserId + `"
 	}`)
-	respBytes := c.doPutRequest(fmt.Sprintf("%s/%s", EndpointTimeSpan, timeSpan.Id), payload)
+	respBytes := c.doPostRequest(EndpointClockOut, payload)
 	c.logger.Infof("%s", string(respBytes))
 	return string(respBytes)
 }
