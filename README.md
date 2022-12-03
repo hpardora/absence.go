@@ -36,3 +36,4 @@ telegram_channel_name: telegram_channel_name
 ## TODO
 - cron execution time can be defined as variable
 - TimeZone can be selected
+- Check that clock-out has a valid id and don't explode when there are an error on clock-in
