@@ -2,6 +2,7 @@ package absence
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/hiyosi/hawk"
 	"github.com/hpardora/absence.go/pkg/randStrings"
@@ -218,7 +219,10 @@ func (c *Client) ClockInApi(userID string) (*TimeSpan, error) {
 
 }
 
-func (c *Client) ClockOutApi(timeSpan *TimeSpan) string {
+func (c *Client) ClockOutApi(timeSpan *TimeSpan) (*TimeSpan, error) {
+	if timeSpan == nil {
+		return nil, errors.New("empty start referenfe")
+	}
 	now := time.Now()
 	nowStr := now.Format("2006-01-02T15:04:05")
 	time.Sleep(1 * time.Second)
@@ -237,5 +241,11 @@ func (c *Client) ClockOutApi(timeSpan *TimeSpan) string {
 	}`)
 	respBytes := c.doPostRequest(EndpointClockOut, payload)
 	c.logger.Infof("%s", string(respBytes))
-	return string(respBytes)
+	tSpan := TimeSpan{}
+	if err := json.Unmarshal(respBytes, &tSpan); err != nil {
+		return nil, err
+	}
+
+	return &tSpan, nil
+
 }

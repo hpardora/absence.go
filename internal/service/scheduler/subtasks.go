@@ -113,9 +113,13 @@ func (s *Scheduler) manageClockIn(startDuration time.Duration) {
 	go func() {
 		<-timerStart.C
 		defer wg.Done()
-		s.timeSpan, _ = s.client.ClockInApi(s.user.ID)
-		s.notifyToTelegram("starting Absence work!")
-		time.Sleep(5 * time.Second)
+		timeSpan, err := s.client.ClockInApi(s.user.ID)
+		result := "success"
+		if err != nil {
+			result = err.Error()
+		}
+		s.timeSpan = timeSpan
+		s.notifyToTelegram(fmt.Sprintf("starting Absence work! result: %s", result))
 	}()
 }
 
@@ -124,8 +128,11 @@ func (s *Scheduler) manageClockOut(endDuration time.Duration) {
 	go func() {
 		<-timerStart.C
 		defer wg.Done()
-		result := s.client.ClockOutApi(s.timeSpan)
+		result := "success"
+		if _, err := s.client.ClockOutApi(s.timeSpan); err != nil {
+			result = err.Error()
+		}
 		s.notifyToTelegram(fmt.Sprintf("finished Absence work! with result: %s", result))
-		time.Sleep(5 * time.Second)
+
 	}()
 }
